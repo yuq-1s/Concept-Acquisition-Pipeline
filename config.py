@@ -32,11 +32,11 @@ no_seed =  False
 # Xlink related settings
 
 url  =  "http://166.111.68.66:9068/EntityLinkingWeb/linkingSubmit.action"
-lang = "zh" 
+lang = "zh"
  # "zh" for extract Chinese concepts, "en" for English
-folder_path = "input_data/context" 
+folder_path = "input_data/context"
 file_name = "baike_context"
-save_folder = "processed_data/xlink_results" 
+save_folder = "processed_data/xlink_results"
 
 rerank_result_path = "processed_data/rerank_results/rerank_result.json"
 
@@ -52,3 +52,21 @@ prun_length = 1000
 bag_length = 20
 save_word_bag = 'processed_data/word_bag_results/word_bag.json'
 word_cut_mode = True
+
+class Evaluation:
+    seed_filename = 'annotated-as-seed.json'
+    evaluated_filenames = [
+        'processed_data/propagation_results/result.json'
+    ]
+    algorithm_names = [
+            'average_distance',
+            'graph_prop',
+            'pagerank',
+            'tf_idf',
+            'xlink',
+            'cluster',
+            'rerank']
+    relevance_field_names = ['', '', '', '', 'freq', 'score', 'score']
+    topks = [100, 200]
+    dump_csv = 'evaluation_results.csv'
+    file2algo = dict(zip(evaluated_filenames, algorithm_names))
