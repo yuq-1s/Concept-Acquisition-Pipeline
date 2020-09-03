@@ -26,12 +26,11 @@ def load_evaluated(filename, gold, seeds, relevance_field_name=None):
         predicted = [thing['name'] for thing in sorted(evals, key=lambda x: -x['score'])]
     else:
         predicted = [thing['name'] for thing in load_json(filename, lambda x: {'name': x['name']})]
-    if seed_filename:
-        with open(seed_filename) as f:
-            predicted = [p for p in predicted if p not in seeds]
+    if seeds:
+        predicted = [p for p in predicted if p not in seeds]
     return predicted
 
-def evaluate(predicted, gold, k):
+def evaluate(predicted, gold, k, ndcg=False, display=False):
     random_predicted = copy.copy(predicted)
     random.shuffle(random_predicted)
     if len(gold.intersection(predicted)) < 30:
@@ -41,14 +40,14 @@ def evaluate(predicted, gold, k):
     results[f'p@{k}'] = precision(gold, predicted, k)
     results[f'random_mAP@{k}'] = ap_at_k(gold, random_predicted, k)
     results[f'random_p@{k}'] = precision(gold, random_predicted, k)
-    if args.ndcg:
+    if ndcg:
         from sklearn.metrics import ndcg_score
         scores = np.array([thing['score'] for thing in evals])
         targets = np.array([thing['name'] in gold for thing in evals])
         results[f'nDCG@{k}'] = ndcg_score([targets[:k]], [scores[:k]])
         random.shuffle(scores)
         results[f'random_nDCG@{k}'] = ndcg_score([targets[:k]], [scores[:k]])
-    if args.display:
+    if display:
         print(predicted[:k])
     return results
 
@@ -63,6 +62,25 @@ def dump_to_csv(results, filename):
         writer.writerow(['algorithm'] + keys)
         for ef, result in new_results.items():
             writer.writerow([config.file2algo[ef]] + [f'{result[k]:.3f}' for k in keys])
+
+def merge_results(results):
+    get_key = lambda k: k[0].split('/')[-1].split('_nf')[0]
+    ret = {get_key(key): {} for key in results}
+    for key, value in results.items():
+        ret[get_key(key)].update(
+            {k: v for k, v in value.items() if not k.startswith('random')}
+        )
+    return ret
+
+def load_gold_and_seeds(gold_filename, seed_filename):
+    gold = set(load_json(gold_filename, lambda x: x['name']))
+    if seed_filename:
+        with open(seed_filename) as f:
+            seeds = set([line.strip() for line in f])
+        gold = set(gold) - seeds
+    else:
+        seeds = set()
+    return gold, seeds
 
 
 if __name__ == '__main__':
@@ -100,13 +118,7 @@ if __name__ == '__main__':
     else:
         gold_filename = args.gold_filename
         seed_filename = args.seed_filename
-    gold = set(load_json(gold_filename, lambda x: x['name']))
-    if seed_filename:
-        with open(seed_filename) as f:
-            seeds = set([line.strip() for line in f])
-        gold = set(gold) - seeds
-    else:
-        seeds = set()
+    gold, seeds = load_gold_and_seeds(gold_filename, seed_filename)
     if args.config:
         import config
         config = config.Evaluation
@@ -115,12 +127,14 @@ if __name__ == '__main__':
                 zip(config.evaluated_filenames, config.relevance_field_names),
                 config.topks):
             predicted = load_evaluated(evaluated_filename, gold, seeds, field_name)
-            result = evaluate(predicted, gold, k)
+            result = evaluate(predicted, gold, k, ndcg=args.ndcg, display=args.display)
             results[(evaluated_filename, k)] = result
+        results = merge_results(results)
         if config.dump_csv:
             dump_to_csv(results, config.dump_csv)
-        print(results)
+        print(json.dumps(results))
     else:
-        predicted = load_evaluated(args.evaluated_filename, gold, seeds, args.relevance)
+        predicted = load_evaluated(args.evaluated_filename, gold, seeds,
+            args.relevance, ndcg=args.ndcg, display=args.display)
         result = evaluate(predicted, gold, int(args.topk))
         print(result)
