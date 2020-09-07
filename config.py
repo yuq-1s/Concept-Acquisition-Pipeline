@@ -1,10 +1,10 @@
 import os
 
-experiment = 'average_distance_'
-# experiment = 'tf_idf_'
+# experiment = 'average_distance_'
+experiment = 'tf_idf_'
 # experiment = 'graph_prop_'
 # experiment = 'pagerank_'
-video_context = True
+video_context = False
 # experiment = ''
 
 # parsed baike context of seed concepts
@@ -26,8 +26,8 @@ tmp_middle_res = 'tmp/middle_res.txt'
 proxy = {'http': 'http://localhost:8001', 'https': 'http://localhost:8001'}  # should change to your own proxy
 bert_client_ip = None
 input_text = 'input_data/context/baike_context'
-# input_seed = 'input_data/seeds/seed_concepts'
-input_seed = 'input_data/seeds/xlore_seeds.txt'
+input_seed = 'input_data/seeds/seed_concepts'
+# input_seed = 'input_data/seeds/xlore_seeds.txt'
 language = 'zh'
 snippet_source = 'baidu'
 times = None
@@ -38,16 +38,11 @@ no_seed =  False
 
 seed = 'more_seed_' if input_seed.endswith('seed_concepts') else 'xlore_seed_'
 
-if video_context:
-    result_path = f'processed_data/propagation_results/dsa_video_context_{experiment}{seed}nf_result.json'
-    rerank_result_path = f"processed_data/rerank_results/dsa_video_context_{experiment}{seed}nf_rerank_result.json"
-    cluster_concept_path = f"processed_data/rerank_results/dsa_video_context_{experiment}{seed}nf_rerank_result.json"
-    cluster_save_path = f"processed_data/cluster_results/dsa_video_context_{experiment}{seed}nf_cluster_result.json"
-else:
-    result_path = f'processed_data/propagation_results/{experiment}{seed}nf_result.json'
-    rerank_result_path = f"processed_data/rerank_results/{experiment}{seed}nf_rerank_result.json"
-    cluster_concept_path = f"processed_data/rerank_results/{experiment}{seed}nf_rerank_result.json"
-    cluster_save_path = f"processed_data/cluster_results/{experiment}{seed}nf_cluster_result.json"
+context_prefix = 'baike_context_' if not video_context else 'dsa_video_context_'
+result_path = f'processed_data/propagation_results/{context_prefix}{experiment}{seed}nf_result.json'
+rerank_result_path = f"processed_data/rerank_results/{context_prefix}{experiment}{seed}nf_rerank_result.json"
+cluster_concept_path = f"processed_data/rerank_results/{context_prefix}{experiment}{seed}nf_rerank_result.json"
+cluster_save_path = f"processed_data/cluster_results/{context_prefix}{experiment}{seed}nf_cluster_result.json"
 
 # Xlink related settings
 
@@ -56,7 +51,7 @@ url  =  "http://166.111.68.66:9068/EntityLinkingWeb/linkingSubmit.action"
 lang = "zh" 
  # "zh" for extract Chinese concepts, "en" for English
 folder_path = "input_data/context" 
-file_name = "dsa_video_context1"
+file_name = "baike_context"
 save_folder = "processed_data/xlink_results" 
 
 
