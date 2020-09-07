@@ -10,7 +10,8 @@ def xlink_extract(folder_path, file_name):
         lines = f.readlines()
     concept_list = []
     l = len(lines)
-    lines = [''.join(lines[i * 100: min((i+1)*100, l)]) for i in range(l // 100 + 1)]
+    N = 2
+    lines = [''.join(lines[i * N: min((i+1)*N, l)]) for i in range(l // N + 1)]
     for text in tqdm(lines):
         data = {"text": text, "lang": config.lang}
         request_result = requests.post(url, data)

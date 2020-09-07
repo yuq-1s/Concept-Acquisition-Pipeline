@@ -1,5 +1,12 @@
 import os
 
+experiment = 'average_distance_'
+# experiment = 'tf_idf_'
+# experiment = 'graph_prop_'
+# experiment = 'pagerank_'
+video_context = True
+# experiment = ''
+
 # parsed baike context of seed concepts
 baike_context = 'input_data/concept_baike/parsed_concept_baidu_1.json'
 seed_folder_path = 'input_data/seeds'
@@ -14,13 +21,13 @@ cookie_paths = ['crawler/cookie/{}'.format(file) for file in os.listdir('crawler
 # tmp paths
 tmp_input_text = 'tmp/input_text.txt'
 tmp_middle_res = 'tmp/middle_res.txt'
-result_path = 'processed_data/propagation_results/result.json'
 
 # default paramters
 proxy = {'http': 'http://localhost:8001', 'https': 'http://localhost:8001'}  # should change to your own proxy
 bert_client_ip = None
 input_text = 'input_data/context/baike_context'
-input_seed = 'input_data/seeds/seed_concepts'
+# input_seed = 'input_data/seeds/seed_concepts'
+input_seed = 'input_data/seeds/xlore_seeds.txt'
 language = 'zh'
 snippet_source = 'baidu'
 times = None
@@ -29,23 +36,34 @@ threshold = None
 decay = None
 no_seed =  False
 
+seed = 'more_seed_' if input_seed.endswith('seed_concepts') else 'xlore_seed_'
+
+if video_context:
+    result_path = f'processed_data/propagation_results/dsa_video_context_{experiment}{seed}nf_result.json'
+    rerank_result_path = f"processed_data/rerank_results/dsa_video_context_{experiment}{seed}nf_rerank_result.json"
+    cluster_concept_path = f"processed_data/rerank_results/dsa_video_context_{experiment}{seed}nf_rerank_result.json"
+    cluster_save_path = f"processed_data/cluster_results/dsa_video_context_{experiment}{seed}nf_cluster_result.json"
+else:
+    result_path = f'processed_data/propagation_results/{experiment}{seed}nf_result.json'
+    rerank_result_path = f"processed_data/rerank_results/{experiment}{seed}nf_rerank_result.json"
+    cluster_concept_path = f"processed_data/rerank_results/{experiment}{seed}nf_rerank_result.json"
+    cluster_save_path = f"processed_data/cluster_results/{experiment}{seed}nf_cluster_result.json"
+
 # Xlink related settings
 
 url  =  "http://166.111.68.66:9068/EntityLinkingWeb/linkingSubmit.action"
-lang = "zh"
+# url = "http://10.1.1.68:8081/EntityLinkingWeb/linkingSubmit.action"
+lang = "zh" 
  # "zh" for extract Chinese concepts, "en" for English
-folder_path = "input_data/context"
-file_name = "baike_context"
-save_folder = "processed_data/xlink_results"
+folder_path = "input_data/context" 
+file_name = "dsa_video_context1"
+save_folder = "processed_data/xlink_results" 
 
-rerank_result_path = "processed_data/rerank_results/rerank_result.json"
 
 # clustering settings
 num_clusters = 15
 num_seed_clusters = 10
 wordvector_path = "word_clustering/word_vectors/sgns.baidubaike.bigram-char"
-cluster_concept_path = "processed_data/rerank_results/rerank_result.json"
-cluster_save_path = "processed_data/cluster_results/cluster_result.json"
 
 # word bag
 prun_length = 1000
@@ -54,9 +72,15 @@ save_word_bag = 'processed_data/word_bag_results/word_bag.json'
 word_cut_mode = True
 
 class Evaluation:
-    seed_filename = 'annotated-as-seed.json'
+    gold_filename = 'annotated-as-seed.json'
+    seed_filename = input_seed
+    # evaluated_filenames = [
+    #     f'processed_data/propagation_results/{experiment}_nf_result.json' for experiment in \
+    #     ['tf_idf', 'pagerank', 'graph_prop', 'average_distance']
+    # ]
     evaluated_filenames = [
-        'processed_data/propagation_results/result.json'
+        f'processed_data/rerank_results/{experiment}_nf_rerank_result.json' for experiment in \
+        ['tf_idf', 'pagerank', 'graph_prop', 'average_distance']
     ]
     algorithm_names = [
             'average_distance',
@@ -66,7 +90,7 @@ class Evaluation:
             'xlink',
             'cluster',
             'rerank']
-    relevance_field_names = ['', '', '', '', 'freq', 'score', 'score']
+    relevance_field_names = ['', '', '', '', 'score']
     topks = [100, 200]
-    dump_csv = 'evaluation_results.csv'
+    dump_csv = None # 'evaluation_results.csv'
     file2algo = dict(zip(evaluated_filenames, algorithm_names))

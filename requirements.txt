@@ -2,5 +2,6 @@ jieba
 requests
 bs4
 nltk
+tensorflow-gpu==1.15.0
 bert-serving-server
 bert-serving-client

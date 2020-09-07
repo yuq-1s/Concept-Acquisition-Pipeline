@@ -1,6 +1,6 @@
 import config
 from word_clustering.kmeans import *
-from preprocess import json_loader, json_dumper
+from crawler.crawler_main import json_loader, json_dumper
 
 def sort_key(i, centroids, seed_centroids):
     mean_vec = centroids[i]

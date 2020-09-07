@@ -1,5 +1,5 @@
 import config
-from preprocess import preprocess, json_loader, json_dumper
+from crawler.crawler_main import json_loader, json_dumper
 from xlink import xlink_main
 import os
 import math

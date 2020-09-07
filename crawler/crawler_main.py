@@ -1,4 +1,4 @@
-from snippet_crawler import *
+from .snippet_crawler import *
 import json
 import numpy as np
 import pickle
