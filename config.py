@@ -51,7 +51,8 @@ url  =  "http://166.111.68.66:9068/EntityLinkingWeb/linkingSubmit.action"
 lang = "zh" 
  # "zh" for extract Chinese concepts, "en" for English
 folder_path = "input_data/context" 
-file_name = "baike_context"
+# file_name = "baike_context"
+file_name = "dsa_video_context"
 save_folder = "processed_data/xlink_results" 
 
 
