@@ -1,4 +1,7 @@
 import math
+import tqdm
+import sys
+import fire
 import config
 import json
 import utils
@@ -7,12 +10,20 @@ def load_file(subtitle_filename, concept_filename):
     def preprocess(document):
         document = document.lower()
         return document
-    with open(subtitle_filename) as f:
-        subtitles = list(map(preprocess, f))
+    if subtitle_filename:
+        with open(subtitle_filename) as f:
+            subtitles = list(map(preprocess, f))
+    else:
+        print("Reading from stdin...")
+        subtitles = list(map(preprocess, sys.stdin))
     concepts = []
     with open(concept_filename) as f:
         for line in f:
-            concepts.append(json.loads(line)['name'])
+            line = line.strip().strip('"')
+            try:
+                concepts.append(json.loads(line)['name'])
+            except (json.decoder.JSONDecodeError, TypeError):
+                concepts.append(line)
     return subtitles, concepts
 
 def tf_idf_dict(documents, keywords):
@@ -29,22 +40,26 @@ def tf_idf_dict(documents, keywords):
             idf_dict[kw] = len(documents) / occurance
     return tf_dict, idf_dict
 
-def rank_keywords(documents, keywords, threshold=2):
+def rank_keywords(documents, keywords, threshold):
     tf_dict, idf_dict = tf_idf_dict(documents, keywords)
     ret = []
     def formula(kw, freq):
         # return math.log(freq + 1) * math.log(idf_dict[kw] + 1)
         return 1 * math.log(idf_dict[kw] + 1)
-    for tf in tf_dict:
+    for tf in tqdm.tqdm(tf_dict):
         scores = {k: formula(k, freq) for k, freq in tf.items()}
         ret.append([x[0] for x in sorted(scores.items(), key=lambda x: -x[1]) if x[1] > threshold])
     return ret
 
-if __name__ == '__main__':
-    subtitle_filename = config.context_folder_path + '/' + config.file_name
-    concept_filename = config.Evaluation.gold_filename
+def main(subtitle_filename: str = config.context_folder_path + '/' + config.file_name,
+        concept_filename: str = config.Evaluation.gold_filename,
+        max_subtitle_len: int = 1500,
+        threshold: float = 2.):
     subtitles, concepts = load_file(subtitle_filename, concept_filename)
-    results = rank_keywords(subtitles, concepts)
+    results = rank_keywords(subtitles, concepts, threshold)
     for subtitle, result in zip(subtitles, results):
-        # print(subtitle)
-        print(result)
+        if len(subtitle) < max_subtitle_len:
+            print(json.dumps({'subtitle': subtitle, 'concept': result}, ensure_ascii=False))
+
+if __name__ == '__main__':
+    fire.Fire(main)
