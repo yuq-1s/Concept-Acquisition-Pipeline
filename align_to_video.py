@@ -13,7 +13,14 @@ def load_file(subtitle_filename, concept_filename):
         return document
     if subtitle_filename:
         with open(subtitle_filename) as f:
-            subtitles = list(map(preprocess, f))
+            f = list(f)
+            try:
+                lines = [json.loads(line) for line in f]
+                subtitles = [preprocess(l['text']) for l in lines]
+                titles = [preprocess(l['section_title']) for l in lines]
+            except (json.decoder.JSONDecodeError, TypeError):
+                subtitles = list(map(preprocess, f))
+                titles = []
     else:
         print("Reading from stdin...")
         subtitles = list(map(preprocess, sys.stdin))
@@ -25,7 +32,7 @@ def load_file(subtitle_filename, concept_filename):
                 concepts.append(json.loads(line)['name'].strip())
             except (json.decoder.JSONDecodeError, TypeError):
                 concepts.append(line.strip())
-    return subtitles, concepts
+    return titles, subtitles, concepts
 
 def my_filter(string):
     string = re.sub(r'[ -~]+', lambda x: f' {x.group(0)} ', string)
@@ -66,10 +73,19 @@ def main(subtitle_filename: str = config.context_folder_path + '/' + config.file
         concept_filename: str = config.Evaluation.gold_filename,
         max_subtitle_len: int = 1500,
         threshold: float = 2.,
-        include_first_n_occurance: int = 2):
-    subtitles, concepts = load_file(subtitle_filename, concept_filename)
+        include_first_n_occurance: int = 2,
+        include_title: bool = True):
+    titles, subtitles, concepts = load_file(subtitle_filename, concept_filename)
     print("Load subtitle and concept finished")
     results = rank_keywords(subtitles, concepts, threshold)
+
+    if include_title:
+        assert titles, "No section titles found"
+        assert len(titles) == len(results)
+        for concept in concepts:
+            for title, result in zip(titles, results):
+                if concept in title:
+                    result.add(concept)
 
     if include_first_n_occurance > 0:
         assert len(subtitles) == len(results)
@@ -84,7 +100,7 @@ def main(subtitle_filename: str = config.context_folder_path + '/' + config.file
 
     for subtitle, result in zip(subtitles, results):
         if len(subtitle) < max_subtitle_len:
-            print(json.dumps({'subtitle': subtitle, 'concept': list(result)}, ensure_ascii=False))
+            print(json.dumps({'text': subtitle, 'concept': list(result)}, ensure_ascii=False))
 
 if __name__ == '__main__':
     fire.Fire(main)
