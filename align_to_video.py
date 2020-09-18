@@ -22,21 +22,25 @@ def load_file(subtitle_filename, concept_filename):
         for line in f:
             line = line.strip().strip('"')
             try:
-                concepts.append(json.loads(line)['name'])
+                concepts.append(json.loads(line)['name'].strip())
             except (json.decoder.JSONDecodeError, TypeError):
-                concepts.append(line)
+                concepts.append(line.strip())
     return subtitles, concepts
 
 def my_filter(string):
     string = re.sub(r'[ -~]+', lambda x: f' {x.group(0)} ', string)
     return re.sub(r'\s+', r' ', string)
 
+def my_count(doc, kw):
+    return (' ' + my_filter(doc) + ' ').count(my_filter(kw))
+
 def tf_idf_dict(documents, keywords):
     tf_dict = [{} for _ in documents]
-    for i, doc in enumerate(documents):
+    print("Matching string...")
+    for i, doc in enumerate(tqdm.tqdm(documents)):
         for kw in keywords:
             # prevent 'd算法' matches 'floyd算法'
-            cnt = (' ' + my_filter(doc) + ' ').count(my_filter(kw))
+            cnt = my_count(doc, kw)
             if cnt > 0:
                 tf_dict[i][kw] = cnt
     idf_dict = {}
@@ -52,20 +56,35 @@ def rank_keywords(documents, keywords, threshold):
     def formula(kw, freq):
         # return math.log(freq + 1) * math.log(idf_dict[kw] + 1)
         return 1 * math.log(idf_dict[kw] + 1)
+    print("Calculating score...")
     for tf in tqdm.tqdm(tf_dict):
         scores = {k: formula(k, freq) for k, freq in tf.items()}
-        ret.append([x[0] for x in sorted(scores.items(), key=lambda x: -x[1]) if x[1] > threshold])
+        ret.append(set([x[0] for x in sorted(scores.items(), key=lambda x: -x[1]) if x[1] > threshold]))
     return ret
 
 def main(subtitle_filename: str = config.context_folder_path + '/' + config.file_name,
         concept_filename: str = config.Evaluation.gold_filename,
         max_subtitle_len: int = 1500,
-        threshold: float = 2.):
+        threshold: float = 2.,
+        include_first_n_occurance: int = 2):
     subtitles, concepts = load_file(subtitle_filename, concept_filename)
+    print("Load subtitle and concept finished")
     results = rank_keywords(subtitles, concepts, threshold)
+
+    if include_first_n_occurance > 0:
+        assert len(subtitles) == len(results)
+        foo = {c: 0 for c in concepts}
+        print("Adding first occurance of concepts...")
+        for i, (subtitle, result) in enumerate(zip(tqdm.tqdm(subtitles), results)):
+            for concept in concepts:
+                if foo[concept] < include_first_n_occurance \
+                        and my_count(subtitle, concept) > 0:
+                            foo[concept] += 1
+                            result.add(concept)
+
     for subtitle, result in zip(subtitles, results):
         if len(subtitle) < max_subtitle_len:
-            print(json.dumps({'subtitle': subtitle, 'concept': result}, ensure_ascii=False))
+            print(json.dumps({'subtitle': subtitle, 'concept': list(result)}, ensure_ascii=False))
 
 if __name__ == '__main__':
     fire.Fire(main)
