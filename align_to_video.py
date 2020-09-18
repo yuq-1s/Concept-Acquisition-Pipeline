@@ -1,4 +1,5 @@
 import math
+import re
 import tqdm
 import sys
 import fire
@@ -26,11 +27,16 @@ def load_file(subtitle_filename, concept_filename):
                 concepts.append(line)
     return subtitles, concepts
 
+def my_filter(string):
+    string = re.sub(r'[ -~]+', lambda x: f' {x.group(0)} ', string)
+    return re.sub(r'\s+', r' ', string)
+
 def tf_idf_dict(documents, keywords):
     tf_dict = [{} for _ in documents]
     for i, doc in enumerate(documents):
         for kw in keywords:
-            cnt = doc.count(kw)
+            # prevent 'd算法' matches 'floyd算法'
+            cnt = (' ' + my_filter(doc) + ' ').count(my_filter(kw))
             if cnt > 0:
                 tf_dict[i][kw] = cnt
     idf_dict = {}
