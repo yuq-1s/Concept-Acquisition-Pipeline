@@ -66,10 +66,11 @@ def rank_keywords(documents, keywords, threshold):
     print("Calculating score...")
     for tf in tqdm.tqdm(tf_dict):
         scores = {k: formula(k, freq) for k, freq in tf.items()}
-        ret.append(set([x[0] for x in sorted(scores.items(), key=lambda x: -x[1]) if x[1] > threshold]))
+        ret.append([x[0] for x in sorted(scores.items(), key=lambda x: -x[1]) if x[1] > threshold])
     return ret
 
-def main(subtitle_filename: str = config.context_folder_path + '/' + config.file_name,
+def main(save_filename: str,
+        subtitle_filename: str = config.context_folder_path + '/' + config.file_name,
         concept_filename: str = config.Evaluation.gold_filename,
         max_subtitle_len: int = 1500,
         threshold: float = 2.,
@@ -85,7 +86,8 @@ def main(subtitle_filename: str = config.context_folder_path + '/' + config.file
         for concept in concepts:
             for title, result in zip(titles, results):
                 if concept in title:
-                    result.add(concept)
+                    if concept not in result:
+                        result.append(concept)
 
     if include_first_n_occurance > 0:
         assert len(subtitles) == len(results)
@@ -96,11 +98,13 @@ def main(subtitle_filename: str = config.context_folder_path + '/' + config.file
                 if foo[concept] < include_first_n_occurance \
                         and my_count(subtitle, concept) > 0:
                             foo[concept] += 1
-                            result.add(concept)
+                            if concept not in result:
+                                result.append(concept)
 
-    for subtitle, result in zip(subtitles, results):
-        if len(subtitle) < max_subtitle_len:
-            print(json.dumps({'text': subtitle, 'concept': list(result)}, ensure_ascii=False))
+    with open(save_filename, 'w') as f:
+        for subtitle, result in zip(subtitles, results):
+            if len(subtitle) < max_subtitle_len:
+                f.write(json.dumps({'text': subtitle, 'concept': list(result)}, ensure_ascii=False) + '\n')
 
 if __name__ == '__main__':
     fire.Fire(main)

@@ -20,14 +20,14 @@ def get_video_info(video_ids):
     return videos
 
 def load_section_titles():
-    with open('results/video_titles_small.csv') as f:
+    with open('results/video_titles_new.csv') as f:
         reader = csv.reader(f)
         next(reader)
         for row in reader:
             yield ('V_'+row[2], row[7])
 
 def load_id_map():
-    with open('results/video_titles_small.csv') as f:
+    with open('results/video_titles_new.csv') as f:
         reader = csv.reader(f)
         next(reader)
         for row in reader:
