@@ -1,0 +1,1 @@
+cat <(fgrep -f <(grep $1 data/entities/course.json | jq .video_order | tr -d '"' | tr -d ',' | tr -d ' ' | sed '$ d' | sed 1d) data/entities/video.json | jq 'select(.text!=null) | .text' | sed 's/^]/],/g' | sed '1s;^;[;' | sed '$ d') <(echo ']]') | python3.7 get_subtitle_from_course_id.py
