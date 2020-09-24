@@ -1,4 +1,5 @@
 import math
+import jsonlines
 import re
 import tqdm
 import sys
@@ -7,7 +8,32 @@ import config
 import json
 import utils
 
-def load_file(subtitle_filename, concept_filename):
+def load_exercise(filename):
+    cleanr = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+    clr = lambda x: re.sub(cleanr, '', x)
+    with jsonlines.open('results/exercise_dsa.jsonl') as reader:
+        for obj in reader:
+            if 'Options' not in obj:
+                continue
+            item = {'body': clr(obj['Body']),
+                'options': {
+                    o['key']: clr(o['value']) for o in obj['Options']
+                },
+                'answer': obj['Answer']}
+            yield item['body'] + '。' +  '。'.join(item['options'].values())
+
+def load_concepts(concept_filename):
+    concepts = []
+    with open(concept_filename) as f:
+        for line in f:
+            line = line.strip().strip('"')
+            try:
+                concepts.append(json.loads(line)['name'].strip())
+            except (json.decoder.JSONDecodeError, TypeError):
+                concepts.append(line.strip())
+    return concepts
+
+def load_video_subtitle(subtitle_filename):
     def preprocess(document):
         document = document.lower()
         return document
@@ -24,15 +50,7 @@ def load_file(subtitle_filename, concept_filename):
     else:
         print("Reading from stdin...")
         subtitles = list(map(preprocess, sys.stdin))
-    concepts = []
-    with open(concept_filename) as f:
-        for line in f:
-            line = line.strip().strip('"')
-            try:
-                concepts.append(json.loads(line)['name'].strip())
-            except (json.decoder.JSONDecodeError, TypeError):
-                concepts.append(line.strip())
-    return titles, subtitles, concepts
+    return titles, subtitles
 
 def my_filter(string):
     string = re.sub(r'[ -~]+', lambda x: f' {x.group(0)} ', string)
@@ -75,8 +93,14 @@ def main(save_filename: str,
         max_subtitle_len: int = 1500,
         threshold: float = 2.,
         include_first_n_occurance: int = 2,
-        include_title: bool = True):
-    titles, subtitles, concepts = load_file(subtitle_filename, concept_filename)
+        include_title: bool = True,
+        is_exercise: bool = False):
+    if is_exercise:
+        assert include_title == False
+        subtitles = list(load_exercise(subtitle_filename))
+    else:
+        titles, subtitles = load_video_subtitle(subtitle_filename)
+    concepts = load_concepts(concept_filename)
     print("Load subtitle and concept finished")
     results = rank_keywords(subtitles, concepts, threshold)
 
