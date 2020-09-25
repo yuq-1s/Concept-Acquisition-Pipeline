@@ -25,10 +25,16 @@ def parse_one_paragraph(paragraph):
             merge_highlights(paragraph, child)
             yield get_text(child)
 
+def extract_paragraph(paragraph):
+    for child in paragraph.getElementsByTagName('w:t'):
+        yield child.childNodes[0].nodeValue.strip()
 def collect_concepts(xml_string):
     for paragraph in minidom.parseString(xml_string).getElementsByTagName('w:p'):
-        yield list(parse_one_paragraph(paragraph))
+        concepts = list(parse_one_paragraph(paragraph))
+        text = ''.join(extract_paragraph(paragraph))
+        if concepts:
+            yield (text, set(concepts))
 
 if __name__ == '__main__':
     document = zipfile.ZipFile(sys.argv[1])
-    print([set(d) for d in collect_concepts(document.read('word/document.xml')) if d])
+    print(len(list(collect_concepts(document.read('word/document.xml')))))
