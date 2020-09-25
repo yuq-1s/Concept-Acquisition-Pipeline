@@ -9,7 +9,7 @@ def get_text(node):
 
 def merge_highlights(paragraph, node):
     next_sibling = node.nextSibling
-    while type(next_sibling) is minidom.Text:
+    while type(next_sibling) is minidom.Text or next_sibling.tagName != 'w:r':
         paragraph.removeChild(next_sibling)
         next_sibling = node.nextSibling
     if next_sibling is not None and next_sibling.getElementsByTagName('w:highlight'):
@@ -31,4 +31,4 @@ def collect_concepts(xml_string):
 
 if __name__ == '__main__':
     document = zipfile.ZipFile(sys.argv[1])
-    print(list(collect_concepts(document.read('word/document.xml'))))
+    print([set(d) for d in collect_concepts(document.read('word/document.xml')) if d])
