@@ -1,4 +1,5 @@
 import zipfile
+import re
 import sys
 from xml.dom import minidom
 
@@ -38,6 +39,45 @@ def collect_concepts(xml_string):
         if concepts:
             yield (text, set(concepts))
 
+def iob_label(ret, start, end):
+    '''
+    >>> a = ['O' for _ in range(8)]
+    >>> iob_label(a, 1, 2)
+    ['O', 'S-CONC', 'O', 'O', 'O', 'O', 'O', 'O']
+    >>> a = ['O' for _ in range(8)]
+    >>> iob_label(a, 1, 3)
+    ['O', 'B-CONC', 'E-CONC', 'O', 'O', 'O', 'O', 'O']
+    >>> a = ['O' for _ in range(8)]
+    >>> iob_label(a, 1, 4)
+    ['O', 'B-CONC', 'M-CONC', 'E-CONC', 'O', 'O', 'O', 'O']
+    '''
+    assert start < end
+    if end == start + 1:
+        ret[start] = 'S-CONC'
+    else:
+        if end > start + 2:
+            for i in range(start+1, end-1):
+                ret[i] = 'M-CONC'
+        ret[start] = 'B-CONC'
+        ret[end-1] = 'E-CONC'
+    return ret
+
+
+def match_concepts(paragraph, concepts):
+    ret = ['O' for _ in paragraph]
+    for concept in concepts:
+        pattern = re.compile(concept)
+        for m in re.finditer(pattern, paragraph):
+            if not ret[m.start()] == 'O':
+                continue
+            iob_label(ret, m.start(), m.end())
+    return ret
+
 if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
     document = zipfile.ZipFile(sys.argv[1])
-    print(len(list(collect_concepts(document.read('word/document.xml')))))
+    for p, c in collect_concepts(document.read('word/document.xml')):
+        print(p)
+        print(match_concepts(p, c))
+        print()
