@@ -1,9 +1,8 @@
 import zipfile
+import copy
 import re
 import sys
 from xml.dom import minidom
-
-# TODO: 去掉中文之间的空格，去掉重复的句号，或逗号后面接句号
 
 def get_text(node):
     textnode = node.getElementsByTagName('w:t')
@@ -32,12 +31,25 @@ def extract_paragraph(paragraph):
     for child in paragraph.getElementsByTagName('w:t'):
         yield child.childNodes[0].nodeValue.strip()
 
+def windowed_text(text, deliminator='。', n_window=3):
+    text = text.split(deliminator)
+    foo = text[:n_window]
+    for thing in text[n_window:]:
+        yield copy.copy(foo)
+        foo.pop(0)
+        foo.append(thing)
+    yield foo
+
 def collect_concepts(xml_string):
     for paragraph in minidom.parseString(xml_string).getElementsByTagName('w:p'):
         concepts = list(parse_one_paragraph(paragraph))
         text = ''.join(extract_paragraph(paragraph))
+        text = text.replace('。。', '。')
+        text = text.replace('，。', '，')
+        text = re.sub(' *([\u4e00-\u9fa5。\.,，:：《》、\(\)（）]{1}) *', '\\1', text)
         if concepts:
-            yield (text, set(concepts))
+            for wt in windowed_text(text):
+                yield ('，'.join(wt) + '。', set(concepts))
 
 def iob_label(ret, start, end):
     '''
@@ -78,6 +90,8 @@ if __name__ == '__main__':
     doctest.testmod()
     document = zipfile.ZipFile(sys.argv[1])
     for p, c in collect_concepts(document.read('word/document.xml')):
-        print(p)
-        print(match_concepts(p, c))
+        labels = match_concepts(p, c)
+        assert len(p) == len(labels)
+        for char, label in zip(p, labels):
+            print(char, label)
         print()
