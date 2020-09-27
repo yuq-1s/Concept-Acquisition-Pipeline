@@ -2,6 +2,8 @@ import zipfile
 import sys
 from xml.dom import minidom
 
+# TODO: 去掉中文之间的空格，去掉重复的句号，或逗号后面接句号
+
 def get_text(node):
     textnode = node.getElementsByTagName('w:t')
     assert len(textnode) == 1
@@ -28,6 +30,7 @@ def parse_one_paragraph(paragraph):
 def extract_paragraph(paragraph):
     for child in paragraph.getElementsByTagName('w:t'):
         yield child.childNodes[0].nodeValue.strip()
+
 def collect_concepts(xml_string):
     for paragraph in minidom.parseString(xml_string).getElementsByTagName('w:p'):
         concepts = list(parse_one_paragraph(paragraph))
