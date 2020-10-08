@@ -135,6 +135,6 @@ if __name__ == '__main__':
         print(json.dumps(results))
     else:
         predicted = load_evaluated(args.evaluated_filename, gold, seeds,
-            args.relevance, ndcg=args.ndcg, display=args.display)
-        result = evaluate(predicted, gold, int(args.topk))
+            args.relevance)
+        result = evaluate(predicted, gold, int(args.topk), ndcg=args.ndcg, display=args.display)
         print(result)
