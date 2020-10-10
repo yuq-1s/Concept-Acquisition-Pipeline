@@ -1,11 +1,11 @@
 import os
 
 # experiment = 'average_distance_'
-experiment = 'tf_idf'
+# experiment = 'tf_idf'
 # experiment = 'graph_prop_'
 # experiment = 'pagerank_'
 video_context = False
-# experiment = ''
+experiment = ''
 
 # parsed baike context of seed concepts
 baike_context = 'input_data/concept_baike/parsed_concept_baidu_1.json'
