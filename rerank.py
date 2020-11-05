@@ -1,8 +1,18 @@
 import config
-from crawler.crawler_main import json_loader, json_dumper
 from xlink import xlink_main
 import os
 import math
+import json
+
+def json_loader(file_path):
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+        return [json.loads(item) for item in lines]
+
+def json_dumper(save_path, json_list):
+    with open(save_path, 'w') as f:
+        str_ = '\n'.join([json.dumps(item, ensure_ascii=False) for item in json_list])
+        f.write(str_)
 
 def result_loader():
     conf_result_path = config.result_path
