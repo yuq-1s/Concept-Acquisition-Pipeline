@@ -39,10 +39,10 @@ no_seed =  False
 seed = 'more_seed_' if input_seed.endswith('seed_concepts') else 'xlore_seed_'
 
 context_prefix = 'baike_context_' if not video_context else 'dsa_video_context_'
-result_path = f'processed_data/propagation_results/{context_prefix}{experiment}{seed}nf_result.json'
-rerank_result_path = f"processed_data/rerank_results/{context_prefix}{experiment}{seed}nf_rerank_result.json"
-cluster_concept_path = f"processed_data/rerank_results/{context_prefix}{experiment}{seed}nf_rerank_result.json"
-cluster_save_path = f"processed_data/cluster_results/{context_prefix}{experiment}{seed}nf_cluster_result.json"
+result_path = f'processed_data/propagation_results/result.json'
+rerank_result_path = f"processed_data/rerank_results/result.json"
+cluster_concept_path = f"processed_data/rerank_results/result.json"
+cluster_save_path = f"processed_data/cluster_results/result.json"
 
 # Xlink related settings
 
