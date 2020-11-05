@@ -1,4 +1,3 @@
-from bert_serving.client import BertClient
 import config
 import numpy as np
 import re
@@ -7,6 +6,7 @@ bc = None
 
 def get_concept_vector(concepts):
     global bc
+    from bert_serving.client import BertClient
     if not bc:
         if config.bert_client_ip:
             bc = BertClient(config.bert_client_ip)
