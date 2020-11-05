@@ -2,4 +2,6 @@ wheel
 jieba
 requests
 nltk
-fire
+numpy
+xlsxwriter
+openpyxl

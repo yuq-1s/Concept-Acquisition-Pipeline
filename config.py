@@ -44,6 +44,7 @@ rerank_result_path = f"processed_data/rerank_results/result.jsonl"
 cluster_concept_path = f"processed_data/rerank_results/result.jsonl"
 cluster_save_path = f"processed_data/cluster_results/result.jsonl"
 xlsx_save_path = f"result.xlsx"
+annotation_save_path = "annotation_result.txt"
 
 # Xlink related settings
 
