@@ -1,3 +1,6 @@
+#ifndef __MYST_H
+#define __MYST_H
+
 #include <iostream>
 #include <cstdio>
 #include <string>
@@ -10,11 +13,10 @@
 #include <codecvt>
 #include "tqdm-cpp/tqdm.hpp"
 
+template<typename CharT = char>
 class SuffixTree {
     int root, last_added, pos, needSL, remainderasdf,
         active_node, active_e, active_len, input_string_length_;
-
-    using CharT = wchar_t;
 
     struct Node {
     /*
@@ -167,7 +169,7 @@ class SuffixTree {
     static std::wstring readFile(const char* filename)
     {
         std::wifstream wif(filename);
-        wif.imbue(std::locale(std::locale(), new std::codecvt_utf8<wchar_t>));
+        wif.imbue(std::locale(std::locale(), new std::codecvt_utf8<CharT>));
         std::wstringstream wss;
         wss << wif.rdbuf();
         return wss.str();
@@ -183,9 +185,10 @@ public:
         for (CharT c: tq::tqdm(input_string)) {
             st_extend(c);
         }
+        std::wcout << std::endl;
     }
 
-    int count_occurance(const wchar_t* query) {
+    int count_occurance(const CharT* query) {
         auto node = traverse(query, root);
         return (node == -1 ? 0: count_leaf(node));
     }
@@ -195,17 +198,4 @@ public:
     }
 };
 
-
-int main() {
-    std::locale loc ("");
-    std::locale::global (loc);
-    std::wcin.imbue(loc);
-    std::wcout.imbue(loc);
-    std::wstring query;
-
-    auto stree = SuffixTree("/tmp/wiki.jsonl");
-    while (std::getline(std::wcin, query)) {
-        std::wcout << "Count of " << query << ": " << stree.count_occurance(query.c_str()) << std::endl;
-    }
-    return 0;
-}
+#endif // __MYST_H
