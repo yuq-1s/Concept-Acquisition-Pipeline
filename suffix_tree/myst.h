@@ -13,152 +13,143 @@
 #include <codecvt>
 #include "tqdm-cpp/tqdm.hpp"
 
+template<typename CharT>
+struct NodeT {
+/*
+There is no need to create an "Edge" struct.
+Information about the edge is stored right in the node.
+[start_; end) interval specifies the edge,
+by which the node is connected to its parent node.
+*/
+
+    NodeT(int start, int end) : start_(start), end_(end), slink_(nullptr) {}
+    int start_, end_;
+    NodeT* slink_;
+    std::unordered_map<CharT, std::unique_ptr<NodeT>> next;
+
+    int string_length() const {
+        return end_ - start_;
+    }
+};
+
 template<typename CharT = char>
 class SuffixTree {
-    int root, last_added, pos, needSL, remainderasdf,
-        active_node, active_e, active_len, input_string_length_;
+    std::basic_string<CharT> text_;
+    using Node = NodeT<CharT>;
+    Node* root_;
 
-    struct Node {
-    /*
-    There is no need to create an "Edge" struct.
-    Information about the edge is stored right in the node.
-    [start; end) interval specifies the edge,
-    by which the node is connected to its parent node.
-    */
+    Node* need_sl_ = root_;
+    int remainder_ = 0;
+    Node* active_node_ = root_;
+    int active_edge_ = 0;
+    int active_len_ = 0;
+    int pos_ = -1;
+    int input_string_length_;
 
-        int start, end, slink;
-        std::unordered_map<CharT, int> next;	
-
-        int edge_length(int pos) {
-            return std::min(end, pos + 1) - start;
-        }
-
-        int string_length() {
-            return end - start;
-        }
-    };
-
-    CharT* text = nullptr;
-    Node* tree = nullptr;
-
-    void printBT(const std::string& prefix, const int node, bool isLeft)
+    std::wostream& printBT(std::wostream& os, const std::wstring& prefix, const Node* node, bool isLeft) const
     {
         bool is_first = true;
-        for (const auto& pair : tree[node].next) {
-            if (int child = pair.second; child != 0) {
-                std::cout << prefix;
-                std::cout << (isLeft ? "├──" : "└──" );
-                std::wcout << std::wstring(text+tree[child].start, tree[child].string_length()) << std::endl;
-                printBT( prefix + (isLeft ? "│  " : "   "), child, is_first);
+        for (const auto& pair : node->next) {
+            if (auto child = pair.second.get(); child != 0) {
+                os << prefix;
+                os << (isLeft ? L"├──" : L"└──" );
+                for (auto i = 0; i < child->string_length(); ++i) {
+                    os << text_[child->start_+i];
+                }
+                os << std::endl;
+                // os << std::wstring(text_.c_str() + child->start_, child->string_length()) << std::endl;
+                printBT(os, prefix + (isLeft ? L"│  " : L"   "), child, is_first);
                 is_first = false;
             }
         }
+        return os;
     }
 
-    void printBT(const int node)
+    std::wostream& printBT(std::wostream& os, const Node* node) const
     {
-        printBT("", node, false);
+        return printBT(os, L"", node, false);
     }
 
-    int new_node(int start, int end) {
-        Node nd;
-        nd.start = start;
-        nd.end = end;
-        nd.slink = 0;
-        tree[++last_added] = nd;
-        return last_added;
+    CharT active_edge_dge() {
+        return text_[active_edge_];
     }
 
-    CharT active_edge() {
-        return text[active_e];
+    void add_SL(Node* node) {
+        if (need_sl_ != root_) need_sl_->slink_ = node;
+        need_sl_ = node;
     }
 
-    void add_SL(int node) {
-        if (needSL > 0) tree[needSL].slink = node;
-        needSL = node;
-    }
-
-    bool walk_down(int node) {
-        if (active_len >= tree[node].edge_length(pos)) {
-            active_e += tree[node].edge_length(pos);
-            active_len -= tree[node].edge_length(pos);
-            active_node = node;
+    bool walk_down(Node* node) {
+        if (int edge_length = std::min(node->end_, pos_ + 1) - node->start_; active_len_ >= edge_length) {
+            active_edge_ += edge_length;
+            active_len_ -= edge_length;
+            active_node_ = node;
             return true;
         }
         return false;
     }
 
-    void st_init() {
-        needSL = 0, last_added = 0, pos = -1, 
-        remainderasdf = 0, active_node = 0, active_e = 0, active_len = 0;
-        root = active_node = new_node(-1, -1);
-    }
-
     void st_extend(CharT c) {
-        text[++pos] = c;
-        needSL = 0;
-        remainderasdf++;
-        while(remainderasdf > 0) {
-            if (active_len == 0) active_e = pos;
-            if (tree[active_node].next[active_edge()] == 0) {
-                int leaf = new_node(pos, input_string_length_);
-                tree[active_node].next[active_edge()] = leaf;
-                add_SL(active_node); //rule 2
+        // printBT(root_);
+        pos_++;
+        need_sl_ = root_;
+        remainder_++;
+        while(remainder_ > 0) {
+            if (active_len_ == 0) active_edge_ = pos_;
+            if (auto& table = active_node_->next; table.find(active_edge_dge()) == table.end()) {
+                table[active_edge_dge()] = std::make_unique<Node>(pos_, text_.size());
+                add_SL(active_node_); //rule 2
             } else {
-                int nxt = tree[active_node].next[active_edge()];
+                auto nxt = active_node_->next[active_edge_dge()].get();
                 if (walk_down(nxt)) continue; //observation 2
-                if (text[tree[nxt].start + active_len] == c) { //observation 1
-                    active_len++;
-                    add_SL(active_node); //observation 3
+                if (text_[nxt->start_ + active_len_] == c) { //observation 1
+                    active_len_++;
+                    add_SL(active_node_); //observation 3
                     break;
                 }
-                int split = new_node(tree[nxt].start, tree[nxt].start + active_len);
-                tree[active_node].next[active_edge()] = split;
-                int leaf = new_node(pos, input_string_length_);
-                tree[split].next[c] = leaf;
-                tree[nxt].start += active_len;
-                tree[split].next[text[tree[nxt].start]] = nxt;
+                auto split = new Node(nxt->start_, nxt->start_ + active_len_);
+                auto foo = active_node_->next[active_edge_dge()].release();
+                active_node_->next[active_edge_dge()].reset(split);
+                split->next[c] = std::make_unique<Node>(pos_, text_.size());
+                nxt->start_ += active_len_;
+                split->next[text_[nxt->start_]] = std::unique_ptr<Node>(foo);
                 add_SL(split); //rule 2
             }
-            remainderasdf--;
-            if (active_node == root && active_len > 0) { //rule 1
-                active_len--;
-                active_e = pos - remainderasdf + 1;
+            remainder_--;
+            if (active_node_ == root_ && active_len_ > 0) { //rule 1
+                active_len_--;
+                active_edge_ = pos_ - remainder_ + 1;
             } else
-                active_node = tree[active_node].slink > 0 ? tree[active_node].slink : root; //rule 3
+                active_node_ = active_node_->slink_ ? active_node_->slink_ : root_; //rule 3
         }
     }
 
-    int traverse(const CharT* query, int current_node) {
+    const Node* traverse(const CharT* query, const Node* current_node) const {
         // printf("============ %s ==========\n", query);
-        // printBT(current_node);
+        // printBT(std::wcout, current_node);
         if (int query_len = wcslen(query); query_len > 0) {
-            CharT c = query[0];
-            if (current_node = tree[current_node].next[c]) {
-                auto current_node_len = tree[current_node].string_length();
-                assert(current_node != root);
-                if (int shorter_len = std::min(query_len, current_node_len),
-                        rc = wcsncmp(query, text+tree[current_node].start, shorter_len);
+            if (auto next_node_iter = current_node->next.find(*query); next_node_iter != current_node->next.end()) {
+                auto next_node = next_node_iter->second.get();
+                assert(next_node != root_);
+                if (int shorter_len = std::min(query_len, next_node->string_length()),
+                        rc = wcsncmp(query, text_.c_str() + next_node->start_, shorter_len);
                         rc == 0) {
-                    return traverse(query+shorter_len, current_node);
-                } else {
-                    return -1;
+                    return traverse(query+shorter_len, next_node);
                 }
-            } else {
-                return -1;
             }
+            return nullptr;
         } else {
             return current_node;
         }
     }
 
-    int count_leaf(int node) {
-        if (tree[node].next.empty()) {
+    int count_leaf(const Node* node) {
+        if (node->next.empty()) {
             return 1;
         } else {
             int ret = 0;
-            for (const auto& pair : tree[node].next) {
-                if (int child = pair.second; child != 0) {
+            for (const auto& pair : node->next) {
+                if (auto child = pair.second.get(); child != root_) {
                     ret += count_leaf(child);
                 }
             }
@@ -176,25 +167,23 @@ class SuffixTree {
     }
 
 public:
-    SuffixTree(const char* filename) {
-        auto input_string = readFile(filename);
-        input_string_length_ = input_string.size();
-        text = new CharT[input_string.size()+1];
-        tree = new Node[2*input_string.size()+1];
-        st_init();
-        for (CharT c: tq::tqdm(input_string)) {
+    SuffixTree(const char* filename) : text_(readFile(filename)), root_(new Node(-1, -1)) {
+        for (CharT c: tq::tqdm(text_)) {
             st_extend(c);
         }
         std::wcout << std::endl;
     }
 
     int count_occurance(const CharT* query) {
-        auto node = traverse(query, root);
-        return (node == -1 ? 0: count_leaf(node));
+        auto node = traverse(query, root_);
+        return (node ? count_leaf(node) : 0);
     }
     ~SuffixTree() {
-        delete text;
-        delete tree;
+        delete root_;
+    }
+
+    std::wostream& print(std::wostream& os) const {
+        return printBT(os, root_);
     }
 };
 
