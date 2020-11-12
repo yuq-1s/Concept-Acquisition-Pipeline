@@ -4,17 +4,20 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <unordered_map>
+#include <sstream>
+#include <fstream>
+#include <codecvt>
+#include "tqdm-cpp/tqdm.hpp"
 
 const int oo = 1<<25;
-const int ALPHABET_SIZE = 256;
-const int MAXN = 5000;
 
-using namespace std;
-
-int root, last_added, pos, needSL, remainder,
+int root, last_added, pos, needSL, remainderasdf,
 	active_node, active_e, active_len;
 
-struct node {
+using CharT = wchar_t;
+
+struct Node {
 /*
    There is no need to create an "Edge" struct.
    Information about the edge is stored right in the node.
@@ -23,28 +26,24 @@ struct node {
 */
 
 	int start, end, slink;
-	int next[ALPHABET_SIZE];	
+	std::unordered_map<CharT, int> next;	
 
 	int edge_length() {
-		return min(end, pos + 1) - start;
+		return std::min(end, pos + 1) - start;
 	}
 };
 
-node tree[2*MAXN];
-char text[MAXN];
-
-int node_str_len(int node) {
-    return min(static_cast<int>(strlen(text)), tree[node].end) - tree[node].start;
-}
+CharT* text = nullptr;
+Node* tree = nullptr;
 
 void printBT(const std::string& prefix, const int node, bool isLeft)
 {
     bool is_first = true;
-    for (int i = 0; i < ALPHABET_SIZE; ++i) {
-        if (int child = tree[node].next[i]; child != 0) {
+    for (const auto& pair : tree[node].next) {
+        if (int child = pair.second; child != 0) {
             std::cout << prefix;
             std::cout << (isLeft ? "├──" : "└──" );
-            std::cout << std::string(text+tree[child].start, node_str_len(child)) << std::endl;
+            std::wcout << std::wstring(text+tree[child].start, tree[child].edge_length()) << std::endl;
             printBT( prefix + (isLeft ? "│  " : "   "), child, is_first);
             is_first = false;
         }
@@ -57,17 +56,15 @@ void printBT(const int node)
 }
 
 int new_node(int start, int end = oo) {
-	node nd;
+	Node nd;
 	nd.start = start;
 	nd.end = end;
 	nd.slink = 0;
-	for (int i = 0; i < ALPHABET_SIZE; i++)
-		nd.next[i] = 0;
 	tree[++last_added] = nd;
 	return last_added;
 }
 
-char active_edge() {
+CharT active_edge() {
 	return text[active_e];
 }
 
@@ -88,15 +85,15 @@ bool walk_down(int node) {
 
 void st_init() {
 	needSL = 0, last_added = 0, pos = -1, 
-	remainder = 0, active_node = 0, active_e = 0, active_len = 0;
+	remainderasdf = 0, active_node = 0, active_e = 0, active_len = 0;
 	root = active_node = new_node(-1, -1);
 }
 
-void st_extend(char c) {
+void st_extend(CharT c) {
 	text[++pos] = c;
 	needSL = 0;
-	remainder++;
-	while(remainder > 0) {
+	remainderasdf++;
+	while(remainderasdf > 0) {
 		if (active_len == 0) active_e = pos;
 		if (tree[active_node].next[active_edge()] == 0) {
 			int leaf = new_node(pos);
@@ -118,25 +115,25 @@ void st_extend(char c) {
 			tree[split].next[text[tree[nxt].start]] = nxt;
 			add_SL(split); //rule 2
 		}
-		remainder--;
+		remainderasdf--;
 		if (active_node == root && active_len > 0) { //rule 1
 			active_len--;
-			active_e = pos - remainder + 1;
+			active_e = pos - remainderasdf + 1;
 		} else
 			active_node = tree[active_node].slink > 0 ? tree[active_node].slink : root; //rule 3
 	}
 }
 
-int traverse(const char* query, int current_node) {
+int traverse(const CharT* query, int current_node) {
     // printf("============ %s ==========\n", query);
     // printBT(current_node);
-    if (int query_len = strlen(query); query_len > 0) {
-        char c = query[0];
+    if (int query_len = wcslen(query); query_len > 0) {
+        CharT c = query[0];
         if (current_node = tree[current_node].next[c]) {
-            auto current_node_len = node_str_len(current_node);
+            auto current_node_len = tree[current_node].edge_length();
             assert(current_node != root);
-            if (int shorter_len = min(query_len, current_node_len),
-                    rc = strncmp(query, text+tree[current_node].start, shorter_len);
+            if (int shorter_len = std::min(query_len, current_node_len),
+                    rc = wcsncmp(query, text+tree[current_node].start, shorter_len);
                     rc == 0) {
                 return traverse(query+shorter_len, current_node);
             } else {
@@ -151,12 +148,12 @@ int traverse(const char* query, int current_node) {
 }
 
 int count_leaf(int node) {
-    if (all_of(cbegin(tree[node].next), cend(tree[node].next), [](int i){return i == 0;})) {
+    if (tree[node].next.empty()) {
         return 1;
     } else {
         int ret = 0;
-        for (int i = 0; i < ALPHABET_SIZE; ++i) {
-            if (int child = tree[node].next[i]; child != 0) {
+        for (const auto& pair : tree[node].next) {
+            if (int child = pair.second; child != 0) {
                 ret += count_leaf(child);
             }
         }
@@ -164,13 +161,38 @@ int count_leaf(int node) {
     }
 }
 
+std::wstring readFile(const char* filename)
+{
+    std::wifstream wif(filename);
+    wif.imbue(std::locale(std::locale(), new std::codecvt_utf8<wchar_t>));
+    std::wstringstream wss;
+    wss << wif.rdbuf();
+    return wss.str();
+}
+
+#define DUMP(x) do { std::wcerr << #x ": " << x << "\n"; } while (0)
+
 int main() {
+    std::locale loc ("");
+    std::locale::global (loc);
+    std::wcin.imbue(loc);
+    std::wcout.imbue(loc);
+    std::wstring query;
+
+    auto input_string = readFile("/tmp/wiki.jsonl");
+    std::cout << "String length: " << input_string.size() << std::endl;
+    text = new CharT[input_string.size()+1];
+    tree = new Node[2*input_string.size()+1];
     st_init();
-    for (char c: "cacaoaaccoacoccaoacoocacoacaoc$") {
+    for (CharT c: tq::tqdm(input_string)) {
         st_extend(c);
     }
-    auto query = "cao";
-    auto node = traverse(query, root);
-    printf("Count of %s: %d\n", query, count_leaf(node));
-	return 0;
+
+    while (std::getline(std::wcin, query)) {
+        auto node = traverse(query.c_str(), root);
+        std::wcout << "Count of " << query << ": " << (node == -1 ? 0: count_leaf(node)) << std::endl;
+    }
+    delete text;
+    delete tree;
+    return 0;
 }
