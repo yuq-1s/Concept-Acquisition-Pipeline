@@ -87,6 +87,24 @@ def rank_keywords(documents, keywords, threshold):
         ret.append([x[0] for x in sorted(scores.items(), key=lambda x: -x[1]) if x[1] > threshold])
     return ret
 
+def is_noun(flag):
+    return re.match(
+        r'^(@(([av]?n[rstz]?)|l|a|v))*(@(([av]?n[rstz]?)|l))$', flag) is not None
+
+def get_candidates(line):
+    res = set()
+    seg = [(t.word, t.flag) for t in pseg.cut(line)]
+    n = len(seg)
+    for i in range(n):
+        phrase, flag = seg[i][0], '@'+seg[i][1]
+        for j in range(i+1, min(n+1, i+7)):
+            if phrase not in res and is_noun(flag):
+                res.add(phrase)
+            if j < n:
+                phrase += seg[j][0]
+                flag += '@'+seg[j][1]
+    return res
+
 def main(save_filename: str,
         subtitle_filename: str = config.context_folder_path + '/' + config.file_name,
         concept_filename: str = config.Evaluation.gold_filename,

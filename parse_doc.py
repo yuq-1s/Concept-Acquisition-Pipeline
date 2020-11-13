@@ -4,6 +4,8 @@ import re
 import sys
 from xml.dom import minidom
 
+chinese_pattern = '\u4e00-\u9fa5。\.,，:：《》、\(\)（）'
+
 def get_text(node):
     textnode = node.getElementsByTagName('w:t')
     assert len(textnode) == 1
@@ -40,13 +42,16 @@ def windowed_text(text, deliminator='。', n_window=3):
         foo.append(thing)
     yield foo
 
+def process_text(text):
+    text = text.replace('。。', '。')
+    text = text.replace('，。', '，')
+    text = re.sub(' *(['+chinese_pattern+']{1}) *', '\\1', text)
+    return text
+
 def collect_concepts(xml_string):
     for paragraph in minidom.parseString(xml_string).getElementsByTagName('w:p'):
         concepts = list(parse_one_paragraph(paragraph))
-        text = ''.join(extract_paragraph(paragraph))
-        text = text.replace('。。', '。')
-        text = text.replace('，。', '，')
-        text = re.sub(' *([\u4e00-\u9fa5。\.,，:：《》、\(\)（）]{1}) *', '\\1', text)
+        text = process_text(''.join(extract_paragraph(paragraph)))
         if concepts:
             for wt in windowed_text(text):
                 yield ('，'.join(wt) + '。', set(concepts))
@@ -85,6 +90,14 @@ def match_concepts(paragraph, concepts):
             iob_label(ret, m.start(), m.end())
     return ret
 
+def exact_match_score(paragraph, correct_concepts, course_concepts):
+    from sklearn.metrics import f1_score, precision_score, recall_score
+    label = match_concepts(correct_concepts)
+    prediction = match_concepts(course_conceps)
+    print('p\t', precision_score(label, prediction))
+    print('r\t', recall_score(label, prediction))
+    print('f1\t', f1_score(label, prediction))
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
@@ -92,6 +105,7 @@ if __name__ == '__main__':
     for p, c in collect_concepts(document.read('word/document.xml')):
         labels = match_concepts(p, c)
         assert len(p) == len(labels)
+        # FIXME: avl树，"a v l" 被分开了
         for char, label in zip(p, labels):
             print(char, label)
         print()

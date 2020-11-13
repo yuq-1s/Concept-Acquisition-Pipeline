@@ -1,3 +1,4 @@
+import logging
 import json
 import csv
 
@@ -32,6 +33,8 @@ def load_id_map():
         next(reader)
         for row in reader:
             yield (row[8], 'C_'+row[0])
+        # yield ('696679', 'C_course-v1:TsinghuaX+20220214X+2018_T2')
+        yield ('696679', 'C_course-v1:TsinghuaX+20220214X+2019_T1')
 
 if __name__ == '__main__':
     id_map = dict(load_id_map())
@@ -44,6 +47,8 @@ if __name__ == '__main__':
         section_titles = dict(load_section_titles())
         with open(f'results/subtitle_{new_xuetang_id}.json', 'w') as f:
             for info in get_video_info(get_video_ids(old_id)):
-                info['section_title'] = section_titles[info['id']]
+                if info['id'] not in section_titles:
+                    logging.warning(f"title of video {info['id']} not found")
+                info['section_title'] = section_titles.get(info['id'], 'NOT_FOUND')
                 f.write(json.dumps(info, ensure_ascii=False) + '\n')
         print(new_xuetang_id, "finished")

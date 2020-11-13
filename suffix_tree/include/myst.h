@@ -18,16 +18,17 @@ struct NodeT {
 /*
 There is no need to create an "Edge" struct.
 Information about the edge is stored right in the node.
-[start_; end) interval specifies the edge,
+[start_; end) longerval specifies the edge,
 by which the node is connected to its parent node.
 */
 
-    NodeT(int start, int end) : start_(start), end_(end), slink_(nullptr) {}
-    int start_, end_;
+    NodeT(long start, long end) : start_(start), end_(end), slink_(nullptr) {}
+    long start_, end_;
+    mutable long leaf_count_ = -1;
     NodeT* slink_;
     std::unordered_map<CharT, std::unique_ptr<NodeT>> next;
 
-    int string_length() const {
+    long string_length() const {
         return end_ - start_;
     }
 };
@@ -39,14 +40,14 @@ class SuffixTree {
     Node* root_;
 
     Node* need_sl_ = root_;
-    int remainder_ = 0;
+    long remainder_ = 0;
     Node* active_node_ = root_;
-    int active_edge_ = 0;
-    int active_len_ = 0;
-    int pos_ = -1;
-    int input_string_length_;
+    long active_edge_ = 0;
+    long active_len_ = 0;
+    long pos_ = -1;
+    long input_string_length_;
 
-    std::wostream& printBT(std::wostream& os, const std::wstring& prefix, const Node* node, bool isLeft) const
+    std::wostream& prlongBT(std::wostream& os, const std::wstring& prefix, const Node* node, bool isLeft) const
     {
         bool is_first = true;
         for (const auto& pair : node->next) {
@@ -58,16 +59,16 @@ class SuffixTree {
                 }
                 os << std::endl;
                 // os << std::wstring(text_.c_str() + child->start_, child->string_length()) << std::endl;
-                printBT(os, prefix + (isLeft ? L"│  " : L"   "), child, is_first);
+                prlongBT(os, prefix + (isLeft ? L"│  " : L"   "), child, is_first);
                 is_first = false;
             }
         }
         return os;
     }
 
-    std::wostream& printBT(std::wostream& os, const Node* node) const
+    std::wostream& prlongBT(std::wostream& os, const Node* node) const
     {
-        return printBT(os, L"", node, false);
+        return prlongBT(os, L"", node, false);
     }
 
     CharT active_edge_dge() {
@@ -80,7 +81,7 @@ class SuffixTree {
     }
 
     bool walk_down(Node* node) {
-        if (int edge_length = std::min(node->end_, pos_ + 1) - node->start_; active_len_ >= edge_length) {
+        if (long edge_length = std::min(node->end_, pos_ + 1) - node->start_; active_len_ >= edge_length) {
             active_edge_ += edge_length;
             active_len_ -= edge_length;
             active_node_ = node;
@@ -90,7 +91,7 @@ class SuffixTree {
     }
 
     void st_extend(CharT c) {
-        // printBT(root_);
+        // prlongBT(root_);
         pos_++;
         need_sl_ = root_;
         remainder_++;
@@ -125,13 +126,13 @@ class SuffixTree {
     }
 
     const Node* traverse(const CharT* query, const Node* current_node) const {
-        // printf("============ %s ==========\n", query);
-        // printBT(std::wcout, current_node);
-        if (int query_len = wcslen(query); query_len > 0) {
+        // prlongf("============ %s ==========\n", query);
+        // prlongBT(std::wcout, current_node);
+        if (long query_len = wcslen(query); query_len > 0) {
             if (auto next_node_iter = current_node->next.find(*query); next_node_iter != current_node->next.end()) {
                 auto next_node = next_node_iter->second.get();
                 assert(next_node != root_);
-                if (int shorter_len = std::min(query_len, next_node->string_length()),
+                if (long shorter_len = std::min(query_len, next_node->string_length()),
                         rc = wcsncmp(query, text_.c_str() + next_node->start_, shorter_len);
                         rc == 0) {
                     return traverse(query+shorter_len, next_node);
@@ -143,17 +144,21 @@ class SuffixTree {
         }
     }
 
-    int count_leaf(const Node* node) {
-        if (node->next.empty()) {
-            return 1;
+    long count_leaf(const Node* node) {
+        if (node->leaf_count_ != -1) {
+            return node->leaf_count_;
         } else {
-            int ret = 0;
-            for (const auto& pair : node->next) {
-                if (auto child = pair.second.get(); child != root_) {
-                    ret += count_leaf(child);
+            if (node->next.empty()) {
+                return 1;
+            } else {
+                node->leaf_count_ = 0;
+                for (const auto& pair : node->next) {
+                    if (auto child = pair.second.get(); child != root_) {
+                        node->leaf_count_ += count_leaf(child);
+                    }
                 }
+                return node->leaf_count_;
             }
-            return ret;
         }
     }
 
@@ -174,7 +179,7 @@ public:
         std::wcout << std::endl;
     }
 
-    int count_occurance(const CharT* query) {
+    long count_occurance(const CharT* query) {
         auto node = traverse(query, root_);
         return (node ? count_leaf(node) : 0);
     }
@@ -182,8 +187,8 @@ public:
         delete root_;
     }
 
-    std::wostream& print(std::wostream& os) const {
-        return printBT(os, root_);
+    std::wostream& prlong(std::wostream& os) const {
+        return prlongBT(os, root_);
     }
 };
 

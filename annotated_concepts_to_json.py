@@ -13,8 +13,8 @@ def main(csv_filename: str = 'os_concepts_annotated.csv'):
     concepts = dict(read_csv(csv_filename))
     with jsonlines.open(f'{csv_filename}.jsonl', mode='w') as writer:
         for concept, importance in concepts.items():
-            if int(importance) == 2:
-                writer.write({'name': concept})
+            if int(importance) == 2 or int(importance) == 1:
+                writer.write({'name': concept, 'importance': importance})
 
 if __name__ == '__main__':
     fire.Fire(main)
