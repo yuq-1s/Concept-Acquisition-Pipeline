@@ -1,3 +1,6 @@
 [submodule "suffix_tree/python/pybind11"]
 	path = suffix_tree/python/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "suffix_tree/src/tqdm-cpp"]
+	path = suffix_tree/src/tqdm-cpp
+	url = https://gitlab.com/miguelraggi/tqdm-cpp.git

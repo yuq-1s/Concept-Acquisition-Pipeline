@@ -11,6 +11,15 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#ifdef USE_TQDM
+#include "tqdm.hpp"
+#endif
+
+// template <typename Int>
+// class Foo {
+//   public:
+//   void method();
+// };
 
 template <typename CharT>
 struct NodeT {
@@ -30,6 +39,22 @@ by which the node is connected to its parent node.
   long string_length() const {
     return end_ - start_;
   }
+
+  long count_leaf() {
+  if (leaf_count_ != -1) {
+    return leaf_count_;
+  } else {
+    if (next.empty()) {
+      return 1;
+    } else {
+      leaf_count_ = 0;
+      for (const auto &pair : next) {
+        leaf_count_ += pair.second->count_leaf();
+      }
+      return leaf_count_;
+    }
+  }
+}
 };
 
 template <typename CharT = char>
@@ -70,7 +95,6 @@ class SuffixTree {
   std::basic_ostream<CharT> &printBT(std::basic_ostream<CharT> &, const Node *) const;
   void st_extend(CharT c);
   const Node *traverse(const CharT *query, const Node *current_node) const;
-  long count_leaf(const Node *node);
   static std::basic_string<CharT> readFile(const char *filename);
   void cut_leaf(Node* node, long level) {
     if (level) {
@@ -83,7 +107,20 @@ class SuffixTree {
   }
 
  public:
-  SuffixTree(const char *filename);
+  // SuffixTree(const char*);
+  SuffixTree(const char *filename) : text_(readFile(filename)), root_(new NodeT<CharT>(-1, -1)) {
+#ifdef USE_TQDM
+    for (CharT c : tq::tqdm(text_)) {
+      st_extend(c);
+    }
+    std::wcout << std::endl;
+#else
+    for (CharT c : text_) {
+      st_extend(c);
+    }
+#endif
+  }
+
   ~SuffixTree() {
     delete root_;
   }
@@ -93,13 +130,13 @@ class SuffixTree {
   }
 
   long count_occurance(const CharT *query) {
-    auto node = traverse(query, root_);
-    return (node ? count_leaf(node) : 0);
+    auto node = const_cast<Node*>(traverse(query, root_));
+    return (node ? node->count_leaf() : 0);
   }
 
   void freeze(long max_query_level) {
     assert(root_->leaf_count_ == -1);
-    count_leaf(root_);
+    root_->count_leaf();
     cut_leaf(root_, max_query_level);
   }
 };

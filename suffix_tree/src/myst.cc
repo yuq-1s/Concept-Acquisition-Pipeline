@@ -1,7 +1,13 @@
 #include "myst.h"
+#ifdef USE_TQDM
+#include "tqdm.hpp"
+#endif
+
+template class SuffixTree<wchar_t>;
+// template class SuffixTree<char>; // fail to compile due to L"" wide string literal
 
 template <typename CharT>
-std::basic_ostream<CharT> &SuffixTree<CharT>::printBT(std::basic_ostream<CharT> &os, const std::basic_string<CharT> &prefix, const NodeT<CharT> *node, bool isLeft) const {
+std::basic_ostream<CharT> &SuffixTree<CharT>::printBT(std::basic_ostream<CharT> &os, const std::basic_string<CharT>& prefix, const NodeT<CharT> *node, bool isLeft) const {
   bool is_first = true;
   for (const auto &pair : node->next) {
     if (auto child = pair.second.get(); child != 0) {
@@ -83,25 +89,6 @@ const NodeT<CharT> *SuffixTree<CharT>::traverse(const CharT *query, const NodeT<
 }
 
 template <typename CharT>
-long SuffixTree<CharT>::count_leaf(const NodeT<CharT> *node) {
-  if (node->leaf_count_ != -1) {
-    return node->leaf_count_;
-  } else {
-    if (node->next.empty()) {
-      return 1;
-    } else {
-      node->leaf_count_ = 0;
-      for (const auto &pair : node->next) {
-        if (auto child = pair.second.get(); child != root_) {
-          node->leaf_count_ += count_leaf(child);
-        }
-      }
-      return node->leaf_count_;
-    }
-  }
-}
-
-template <typename CharT>
 std::basic_string<CharT> SuffixTree<CharT>::readFile(const char *filename) {
   std::basic_ifstream<CharT> wif(filename);
   wif.imbue(std::locale(std::locale(), new std::codecvt_utf8<CharT>));
@@ -110,10 +97,22 @@ std::basic_string<CharT> SuffixTree<CharT>::readFile(const char *filename) {
   return wss.str();
 }
 
-template <typename CharT>
-SuffixTree<CharT>::SuffixTree(const char *filename) : text_(readFile(filename)), root_(new NodeT<CharT>(-1, -1)) {
-  for (CharT c : text_) {
-    st_extend(c);
-  }
-  std::wcout << std::endl;
-}
+// FIXME: Why cannot I do this?
+// template <typename CharT>
+// SuffixTree<CharT>::SuffixTree(const char *filename) : text_(readFile(filename)), root_(new NodeT<CharT>(-1, -1)) {
+// #ifdef USE_TQDM
+//   for (CharT c : tq::tqdm(text_)) {
+//     st_extend(c);
+//   }
+//   std::wcout << std::endl;
+// #else
+//   for (CharT c : text_) {
+//     st_extend(c);
+//   }
+// #endif
+// }
+
+// template <typename CharT>
+// SuffixTree<CharT>::~SuffixTree() {
+//   delete root_;
+// }
