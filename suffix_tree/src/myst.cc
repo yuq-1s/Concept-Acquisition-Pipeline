@@ -116,9 +116,3 @@ SuffixTree::SuffixTree(const char* filename) : text_(readFile(filename)), root_(
     }
     std::wcout << std::endl;
 }
-
-template<typename CharT>
-long count_occurance(const CharT* query) {
-    auto node = traverse(query, root_);
-    return (node ? count_leaf(node) : 0);
-}
