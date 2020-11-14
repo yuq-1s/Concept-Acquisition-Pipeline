@@ -10,16 +10,11 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #ifdef USE_TQDM
 #include "tqdm.hpp"
 #endif
-
-// template <typename Int>
-// class Foo {
-//   public:
-//   void method();
-// };
 
 template <typename CharT>
 struct NodeT {
@@ -91,10 +86,12 @@ class SuffixTree {
     return false;
   }
 
+#ifdef DEBUG
   std::basic_ostream<CharT> &printBT(std::basic_ostream<CharT> &, const std::basic_string<CharT> &, const Node *, bool) const;
   std::basic_ostream<CharT> &printBT(std::basic_ostream<CharT> &, const Node *) const;
+#endif
   void st_extend(CharT c);
-  const Node *traverse(const CharT *query, const Node *current_node) const;
+  const Node *traverse(const std::basic_string_view<CharT> query, const Node *current_node) const;
   static std::basic_string<CharT> readFile(const char *filename);
   void cut_leaf(Node* node, long level) {
     if (level) {
@@ -107,28 +104,12 @@ class SuffixTree {
   }
 
  public:
-  // SuffixTree(const char*);
-  SuffixTree(const char *filename) : text_(readFile(filename)), root_(new NodeT<CharT>(-1, -1)) {
-#ifdef USE_TQDM
-    for (CharT c : tq::tqdm(text_)) {
-      st_extend(c);
-    }
-    std::wcout << std::endl;
-#else
-    for (CharT c : text_) {
-      st_extend(c);
-    }
+  SuffixTree(const char *filename);
+  ~SuffixTree();
+
+#ifdef DEBUG
+  std::basic_ostream<CharT> &print(std::basic_ostream<CharT> &os) const;
 #endif
-  }
-
-  ~SuffixTree() {
-    delete root_;
-  }
-
-  std::basic_ostream<CharT> &print(std::basic_ostream<CharT> &os) const {
-    return printBT(os, root_);
-  }
-
   long count_occurance(const CharT *query) {
     auto node = const_cast<Node*>(traverse(query, root_));
     return (node ? node->count_leaf() : 0);

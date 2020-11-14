@@ -3,9 +3,7 @@
 #include "tqdm.hpp"
 #endif
 
-template class SuffixTree<wchar_t>;
-// template class SuffixTree<char>; // fail to compile due to L"" wide string literal
-
+#ifdef DEBUG
 template <typename CharT>
 std::basic_ostream<CharT> &SuffixTree<CharT>::printBT(std::basic_ostream<CharT> &os, const std::basic_string<CharT>& prefix, const NodeT<CharT> *node, bool isLeft) const {
   bool is_first = true;
@@ -29,6 +27,12 @@ template <typename CharT>
 std::basic_ostream<CharT> &SuffixTree<CharT>::printBT(std::basic_ostream<CharT> &os, const NodeT<CharT> *node) const {
   return printBT(os, L"", node, false);
 }
+
+template <typename CharT>
+std::basic_ostream<CharT> &SuffixTree<CharT>print(std::basic_ostream<CharT> &os) const {
+  return printBT(os, root_);
+}
+#endif
 
 template <typename CharT>
 void SuffixTree<CharT>::st_extend(CharT c) {
@@ -69,17 +73,16 @@ void SuffixTree<CharT>::st_extend(CharT c) {
 }
 
 template <typename CharT>
-const NodeT<CharT> *SuffixTree<CharT>::traverse(const CharT *query, const NodeT<CharT> *current_node) const {
+const NodeT<CharT> *SuffixTree<CharT>::traverse(const std::basic_string_view<CharT> query, const NodeT<CharT> *current_node) const {
   // printf("============ %s ==========\n", query);
   // printBT(std::wcout, current_node);
-  if (long query_len = wcslen(query); query_len > 0) {
-    if (auto next_node_iter = current_node->next.find(*query); next_node_iter != current_node->next.end()) {
+  if (long query_len = query.size(); query_len > 0) {
+    if (auto next_node_iter = current_node->next.find(query[0]); next_node_iter != current_node->next.end()) {
       auto next_node = next_node_iter->second.get();
       assert(next_node != root_);
-      if (long shorter_len = std::min(query_len, next_node->string_length()),
-          rc = wcsncmp(query, text_.c_str() + next_node->start_, shorter_len);
-          rc == 0) {
-        return traverse(query + shorter_len, next_node);
+      if (long shorter_len = std::min(query_len, next_node->string_length());
+          query == std::basic_string_view<CharT>(text_.c_str() + next_node->start_, shorter_len)) {
+        return traverse(query.cbegin() + shorter_len, next_node);
       }
     }
     return nullptr;
@@ -97,22 +100,34 @@ std::basic_string<CharT> SuffixTree<CharT>::readFile(const char *filename) {
   return wss.str();
 }
 
-// FIXME: Why cannot I do this?
-// template <typename CharT>
-// SuffixTree<CharT>::SuffixTree(const char *filename) : text_(readFile(filename)), root_(new NodeT<CharT>(-1, -1)) {
-// #ifdef USE_TQDM
-//   for (CharT c : tq::tqdm(text_)) {
-//     st_extend(c);
-//   }
-//   std::wcout << std::endl;
-// #else
-//   for (CharT c : text_) {
-//     st_extend(c);
-//   }
-// #endif
-// }
+template <>
+std::basic_string<char> SuffixTree<char>::readFile(const char *filename) {
+  std::basic_ifstream<char> wif(filename);
+  std::basic_stringstream<char> wss;
+  wss << wif.rdbuf();
+  return wss.str();
+}
 
-// template <typename CharT>
-// SuffixTree<CharT>::~SuffixTree() {
-//   delete root_;
-// }
+template <typename CharT>
+SuffixTree<CharT>::SuffixTree(const char *filename) : text_(readFile(filename)), root_(new NodeT<CharT>(-1, -1)) {
+#ifdef USE_TQDM
+  for (CharT c : tq::tqdm(text_)) {
+    st_extend(c);
+  }
+  std::wcout << std::endl;
+#else
+  for (CharT c : text_) {
+    st_extend(c);
+  }
+#endif
+}
+
+template <typename CharT>
+SuffixTree<CharT>::~SuffixTree() {
+  delete root_;
+}
+
+template class SuffixTree<wchar_t>;
+#ifndef DEBUG
+template class SuffixTree<char>;
+#endif
