@@ -8,4 +8,8 @@ PYBIND11_MODULE(pyst, m) {
         .def(py::init<const char*>())
         .def("count_occurance", &SuffixTree<wchar_t>::count_occurance)
         .def("freeze", &SuffixTree<wchar_t>::freeze);
+    py::class_<SuffixTree<char>>(m, "SuffixTreeAscii")
+        .def(py::init<const char*>())
+        .def("count_occurance", &SuffixTree<char>::count_occurance)
+        .def("freeze", &SuffixTree<char>::freeze);
 }

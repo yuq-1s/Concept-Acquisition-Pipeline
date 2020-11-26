@@ -65,6 +65,7 @@ class SuffixTree {
   long active_len_ = 0;
   long pos_ = -1;
   long input_string_length_;
+  long max_query_length_ = std::numeric_limits<long>::max();
 
   CharT active_edge_dge() {
     return text_[active_edge_];
@@ -116,7 +117,12 @@ class SuffixTree {
   }
 
   void freeze(long max_query_level) {
-    assert(root_->leaf_count_ == -1);
+    if (max_query_length_ <= max_query_length) {
+      std::cout << "WARNING: current max_query_length_ is " << max_query_length_ <<
+      ", which is not bigger than provided" << max_query_length << ". Ignored." << std::endl;
+      return;
+    }
+    max_query_length_ = max_query_length;
     root_->count_leaf();
     cut_leaf(root_, max_query_level);
   }
